@@ -1,10 +1,11 @@
 import requests
 import re
+import csv
 from bs4 import BeautifulSoup
 
 # GET url request 
 url = 'http://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html'
-requests.get(url)
+
 response =requests.get(url)
 
 if response.ok: 
@@ -12,10 +13,10 @@ if response.ok:
     soup = BeautifulSoup(response.text, 'html.parser')
     for article in soup.findAll('article'):
     #Title
-        title = article.select('.product_main h1')[0].get_text()
+        product_title = article.select('.product_main h1')[0].get_text()
 
     #Product page URL
-
+        page_url = response.url
     
     #Price including taxes
         th_product_price_incl_taxes = soup.find('th', text ='Price (incl. tax)')
@@ -39,7 +40,19 @@ if response.ok:
         td_product_category = th_product_type.find_next_sibling('td')
 
     #Review rating
+        product_rating_class = soup.find(class_='star-rating')
+        product_rating_value_string = product_rating_class.get('class')[1]
+        
+        help_dict = {
+            'Zero': '0',
+            'One': '1',
+            'Two': '2',
+            'Three': '3',
+            'Four': '4',
+            'Five': '5'
+        }
 
+        product_rating_value = help_dict[product_rating_value_string] 
 
     #UPC
         th_product_upc = soup.find('th', text ='UPC')
@@ -53,12 +66,37 @@ if response.ok:
     #
 
     #Print function 
-        #print(th_product_upc_text, td_product_upc_text)
-        #print(product_image_url)
-        #print(th_product_price_excl_taxes.get_text(), td_product_price_excl_taxes.get_text())
-        #print(th_product_price_incl_taxes.get_text(), td_product_price_incl_taxes.get_text())
-        #print(product_description.get_text())
-        print(product_stock_quantity)
+        print(
+        td_product_upc_text,
+        product_title,
+        th_product_price_incl_taxes.get_text(), td_product_price_incl_taxes.get_text(),
+        th_product_price_excl_taxes.get_text(), td_product_price_excl_taxes.get_text(),
+        product_stock_quantity,
+        product_description.get_text(),
+        td_product_category,
+        product_rating_value,
+        product_image_url)
 
+# 1. Ouvrir un fichier en mode écriture en Python
+books_datas = open('OnlineBooks_scrapping.csv', 'w')
 
-    
+# 2. Créez un objet CSV writer
+writer = csv.writer(books_datas)
+
+# 3. Ecrire des données dans un fichier CSV
+data = [page_url,
+        td_product_upc_text,
+        product_title,
+        th_product_price_incl_taxes.get_text(), td_product_price_incl_taxes.get_text(),
+        th_product_price_excl_taxes.get_text(), td_product_price_excl_taxes.get_text(),
+        product_stock_quantity,
+        product_description.get_text(),
+        td_product_category,
+        product_rating_value,
+        product_image_url]
+
+writer.writerow(data)
+
+# 4. Fermez un fichier ouvert avec open en Python
+books_datas.close()
+
