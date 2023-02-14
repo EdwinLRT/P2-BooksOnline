@@ -1,3 +1,4 @@
+#Imports
 import requests
 import re
 import csv
@@ -77,26 +78,34 @@ if response.ok:
         product_rating_value,
         product_image_url)
 
-# 1. Ouvrir un fichier en mode écriture en Python
-books_datas = open('OnlineBooks_scrapping.csv', 'w')
+# CSV generation 
 
-# 2. Créez un objet CSV writer
-writer = csv.writer(books_datas)
-
-# 3. Ecrire des données dans un fichier CSV
-data = [page_url,
+#header for column names
+header = ['page_url', 'upc',
+        'book_title',
+        'price_incl_taxes',
+        'price_excl_taxes',
+        'stock_quantity',
+        'description',
+        'category',
+        'rating',
+        'image_url'
+        ]
+#Datas in file 
+data =  [page_url,
         td_product_upc_text,
         product_title,
-        th_product_price_incl_taxes.get_text(), td_product_price_incl_taxes.get_text(),
-        th_product_price_excl_taxes.get_text(), td_product_price_excl_taxes.get_text(),
+        td_product_price_incl_taxes.get_text(),
+        td_product_price_excl_taxes.get_text(),
         product_stock_quantity,
         product_description.get_text(),
-        td_product_category,
+        td_product_category.get_text(),
         product_rating_value,
         product_image_url]
 
-writer.writerow(data)
-
-# 4. Fermez un fichier ouvert avec open en Python
-books_datas.close()
+# create csv file / enter in writing mode
+with open('onlinebooks_scrapping.csv', 'w', newline='') as csvfile :
+    writer = csv.writer(csvfile, delimiter=',')
+    writer.writerow(header)
+    writer.writerow(data)
 
