@@ -109,3 +109,13 @@ with open('onlinebooks_scrapping.csv', 'w', newline='') as csvfile :
     writer.writerow(header)
     writer.writerow(data)
 
+
+
+FOR JOINING URL 
+ ## Find the image link
+    base_url = "https://books.toscrape.com"
+    from urllib.parse import urljoin
+
+    image = soup.find("img")
+    image = urljoin(str(base_url), str(image["src"]))
+
