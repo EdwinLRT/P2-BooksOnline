@@ -3,7 +3,27 @@ import requests
 import re
 import csv
 from bs4 import BeautifulSoup
+from urllib.parse import urljoin
 
+#Function - get href info from category list (from left vertical menu)
+def retrieve_categories_links() :
+    categories_link_list = []
+    for li in categories_list:
+        link = li.find('a')
+        if link is not None:
+            href = link.get('href')
+            href = href.replace('index.html','')
+            categories_link_list.append(href)
+    print(categories_link_list)
+            # pages= np.arange(1,11)
+            # for page in pages : 
+            #     cat_url = 'https://books.toscrape.com/'+href+'page-'+str(page)+'.html'
+            #     print(cat_url)
+
+#Function - Then modify the link for page navigation 
+def retrieve_articles_links() : 
+    articles_link_list = []
+    
 # GET url request 
 url = 'http://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html'
 
@@ -61,9 +81,13 @@ if response.ok:
         th_product_upc_text = soup.find('th', text ='UPC').get_text()
         td_product_upc_text = th_product_upc.find_next_sibling('td').get_text()
     #Image URL 
+
+        base_url = "https://books.toscrape.com"
+
         gallery_div = soup.find('div', {'id':'product_gallery'})
         product_image = gallery_div.find('img')
-        product_image_url = product_image['src']
+        product_image_url = urljoin(str(base_url), str(product_image['src']))
+
     #
 
     #Print function 
@@ -109,13 +133,4 @@ with open('onlinebooks_scrapping.csv', 'w', newline='') as csvfile :
     writer.writerow(header)
     writer.writerow(data)
 
-
-
-FOR JOINING URL 
- ## Find the image link
-    base_url = "https://books.toscrape.com"
-    from urllib.parse import urljoin
-
-    image = soup.find("img")
-    image = urljoin(str(base_url), str(image["src"]))
 
