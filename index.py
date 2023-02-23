@@ -5,8 +5,15 @@ import csv
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 
-#Function - get href info from category list (from left vertical menu)
-def retrieve_categories_links() :
+#GET url request 
+url = 'http://books.toscrape.com/'
+
+response =requests.get(url)
+soup = BeautifulSoup(response.text, 'html.parser')
+
+#Get href from category list (from left vertical menu)
+def get_categories_links() :
+    categories_list = soup.select('ul.nav-list li ul li')
     categories_link_list = []
     for li in categories_list:
         link = li.find('a')
@@ -14,24 +21,81 @@ def retrieve_categories_links() :
             href = link.get('href')
             href = href.replace('index.html','')
             categories_link_list.append(href)
-    print(categories_link_list)
-            # pages= np.arange(1,11)
-            # for page in pages : 
-            #     cat_url = 'https://books.toscrape.com/'+href+'page-'+str(page)+'.html'
-            #     print(cat_url)
+    return categories_link_list
 
-#Function - Then modify the link for page navigation 
-def retrieve_articles_links() : 
+#categories_list = get_categories_links()
+
+
+#Get all the pages of a specific category
+
+#### V1  Loop to get all the links of the website
+# def get_category_pages(): 
+#     category_pages = []
+#     page = 1   
+#     for i in categories_list : 
+#         while True : 
+#             url = 'https://books.toscrape.com/'+i+'page-'+str(page)+'.html'
+#             if 'page-1.html' in url :
+#                 url = url.replace('page-1.html', 'index.html') 
+#             response = requests.get(url)
+#             if response.status_code == 200:
+#                 category_pages.append(url)
+#                 page += 1
+#             else:
+#                 page = 1
+#                 break
+#     return category_pages
+
+
+
+### V2  for a single category
+def get_category_pages(category_path): 
+    specific_category_pages = []
+    page = 1    
+    while True : 
+        url = 'https://books.toscrape.com/'+category_path+'page-'+str(page)+'.html'
+        if 'page-1.html' in url :
+            url = url.replace('page-1.html', 'index.html') 
+        response = requests.get(url)
+        if response.status_code == 200:
+            specific_category_pages.append(url)
+            page += 1
+        else:
+            page = 1
+            break
+    return specific_category_pages
+
+category_pages = get_category_pages('catalogue/category/books/historical-fiction_4/')
+print(category_pages)
+
+
+#Get all articles links from category pages
+def get_articles_links() : 
     articles_link_list = []
+
+    for i in category_pages : 
+        url = i
+        response =requests.get(url)
+        soup = BeautifulSoup(response.text, 'html.parser')
+        articles_list = soup.select('div section div ol.row li article h3') 
+
+        for li in articles_list:
+            link = li.find('a')
+            if link is not None:
+                href = link.get('href')
+                # href = href.replace('index.html','')
+                base_url = "https://books.toscrape.com/"
+                href = href.replace('../../../','')
+                full_article_link = urljoin(('https://books.toscrape.com/catalogue/'), str(href))
+                print(full_article_link)
+                articles_link_list.append(full_article_link)
+    return articles_link_list
     
-# GET url request 
-url = 'http://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html'
+test = get_articles_links()
+print(test)
 
-response =requests.get(url)
 
-if response.ok: 
-    # Analyse HTML with beautifulsoup 
-    soup = BeautifulSoup(response.text, 'html.parser')
+def get_book_informations():
     for article in soup.findAll('article'):
     #Title
         product_title = article.select('.product_main h1')[0].get_text()
@@ -103,34 +167,34 @@ if response.ok:
         product_image_url)
 
 # CSV generation 
+def create_csv_file():
+    #header for column names
+    header = ['page_url', 'upc',
+            'book_title',
+            'price_incl_taxes',
+            'price_excl_taxes',
+            'stock_quantity',
+            'description',
+            'category',
+            'rating',
+            'image_url'
+            ]
+    #Datas in file 
+    data =  [page_url,
+            td_product_upc_text,
+            product_title,
+            td_product_price_incl_taxes.get_text(),
+            td_product_price_excl_taxes.get_text(),
+            product_stock_quantity,
+            product_description.get_text(),
+            td_product_category.get_text(),
+            product_rating_value,
+            product_image_url]
 
-#header for column names
-header = ['page_url', 'upc',
-        'book_title',
-        'price_incl_taxes',
-        'price_excl_taxes',
-        'stock_quantity',
-        'description',
-        'category',
-        'rating',
-        'image_url'
-        ]
-#Datas in file 
-data =  [page_url,
-        td_product_upc_text,
-        product_title,
-        td_product_price_incl_taxes.get_text(),
-        td_product_price_excl_taxes.get_text(),
-        product_stock_quantity,
-        product_description.get_text(),
-        td_product_category.get_text(),
-        product_rating_value,
-        product_image_url]
-
-# create csv file / enter in writing mode
-with open('onlinebooks_scrapping.csv', 'w', newline='') as csvfile :
-    writer = csv.writer(csvfile, delimiter=',')
-    writer.writerow(header)
-    writer.writerow(data)
+    # create csv file / enter in writing mode
+    with open('onlinebooks_scrapping.csv', 'w', newline='') as csvfile :
+        writer = csv.writer(csvfile, delimiter=',')
+        writer.writerow(header)
+        writer.writerow(data)
 
 
