@@ -11,22 +11,21 @@ def get_soup(url) :
     soup = BeautifulSoup(response.text, 'html.parser')
     return soup
 
-print('Starting scraping...')
 
 #Get href from category list (from left vertical menu)
-def get_categories_links() :
+def get_categories() :
     print('Collecting categories links...')
     soup = get_soup('https://books.toscrape.com/index.html')
     categories_list = soup.select('ul.nav-list li ul li')
-    categories_link_list = []
+    categories = []
     for li in categories_list:
         link = li.find('a')
         if link is not None:
             href = link.get('href')
             href = href.replace('index.html','')
-            categories_link_list.append(href)
+            categories.append(href)
     print('Categories links collected')
-    return categories_link_list
+    return categories
 
 
 #Get all pages of a category 
@@ -47,28 +46,13 @@ def get_category_pages(category_path):
             break
     return category_pages
 
-#Get every book links from category pages
-def get_articles_links(category_pages) : 
-    articles_link_list = []
-    print('Collecting articles links from category pages...')
-    for i in category_pages : 
-        url = i
-        soup = get_soup(url)
-        articles_list = soup.select('div section div ol.row li article h3') 
+def get_books_from_page(page_url):
+    response = requests.get(page_url)
+    soup = BeautifulSoup(response.content, 'html.parser')
+    list_books = soup.select("article.product_pod > h3 > a")
+    books = [("http://books.toscrape.com/catalogue/" + book["href"].replace("../", "")) for book in list_books]
+    return books
 
-        for li in articles_list:
-            link = li.find('a')
-            if link is not None:
-                href = link.get('href')
-                # href = href.replace('index.html','')
-                base_url = "https://books.toscrape.com/"
-                href = href.replace('../../../','')
-                full_article_link = urljoin(('https://books.toscrape.com/catalogue/'), str(href))
-                articles_link_list.append(full_article_link)
-    print('Articles links collected')
-    return articles_link_list
-
-print('Collecting each book informations...')
 def get_book_informations(book_url):
     url = book_url
     soup = get_soup(book_url)
@@ -97,8 +81,12 @@ def get_book_informations(book_url):
         product_stock_quantity = int(re.findall(r'\d+', td_product_stock)[0])
 
         #Product description
-        product_description_title = soup.find('div', {'id':'product_description'})
-        product_description = product_description_title.find_next_sibling('p')
+        product_description_title = soup.find('div', {'id': 'product_description'})
+        if product_description_title is None:
+            product_description = "Description missing"
+        else:
+            product_description = product_description_title.find_next_sibling('p')
+            product_description = product_description.get_text()
 
         #Category
         th_product_type = soup.find('th', string ='Product Type')
@@ -134,7 +122,7 @@ def get_book_informations(book_url):
         book_data.append(td_product_price_incl_taxes)
         book_data.append(td_product_price_excl_taxes)
         book_data.append(product_stock_quantity)
-        book_data.append(product_description.get_text())
+        book_data.append(product_description)
         book_data.append(td_product_category.get_text())
         book_data.append(product_rating_value)
         book_data.append(product_image_url)
@@ -144,64 +132,36 @@ def get_book_informations(book_url):
     else :
         print('Data not found for this book :' + book_url)
 
-    print('Books informations collected')
 
 # CSV generation 
-def create_csv_file():
-    print('CSV generation...')
-    #header for column names
-    header = ['UPC',
-            'Title',
-            'Price incl. taxes',
-            'Price excl. taxes',
-            'Stock quantity',
-            'Description',
-            'Category',
-            'Rating',
-            'Image URL',
-            'Article URL'
-            ]
-    
-    # create csv file / enter in writing mode
-    for category in categories_list :
-        #cleaning files names
-        category = category.replace('/','')
-        category = category.replace('cataloguecategorybooks','')
-        file_name = f'{category}.csv'
-        #creating files and writing in 
-        with open(file_name, 'w', newline='') as csvfile :
-            writer = csv.writer(csvfile, delimiter=',')
-            writer.writerow(header)
-            for i in articles_links : 
-                    print(i)
-                    writer.writerow(get_book_informations(i))
-    print('CSV generated')
-
-print('End of the program')
-
+def create_csv_file(category_name,book_data):
+    print('Creating CSV file...')
+    with open(f"{category_name}.csv", "w", newline="", encoding="utf-8") as csv_file:
+        writer = csv.writer(csv_file, delimiter=',')
+        csv_header = ['UPC','Title','Price incl. taxes','Price excl. taxes','Stock quantity','Description','Category','Rating','Image URL','Article URL']
+        writer.writerow(csv_header)
+        writer.writerows(book_data)
+    print('CSV file created')
 
 #A function to rule them all
 def scraping_all_categories():
     print('Scraping all categories...')
     print('Getting categories links...')
-    categories_links = get_categories_links()
-    all_categories_pages = []
-    for category in categories_links:
+    categories = get_categories()
+    for category in categories :
+        category_name = category.replace('/','')
+        category_name = category_name.replace('cataloguecategorybooks','')
         print('Scraping category : ' + category)
         category_pages = get_category_pages(category)
-        all_categories_pages.append(category_pages)
-        print('OK')
-    print(all_categories_pages)
-    for pages in all_categories_pages:
-        articles_links = get_articles_links(pages)
-        print(articles_links)
-
-        
-        #for category in all_categories_pages:
-         #   category_pages.append(category)
-    #     articles_links = get_articles_links()
-    #     create_csv_file()
+        book_data = []
+        for page in category_pages :
+            print('Scraping page : ' + page)
+            books_on_page = get_books_from_page(page)
+            
+            for book_url in books_on_page :
+                book_informations = get_book_informations(book_url)
+                book_data.append(book_informations)
+        print('Category scraped : '+ category_name)
+        create_csv_file(category_name,book_data)
     print('All categories scraped')
-
 scraping_all_categories()
-
