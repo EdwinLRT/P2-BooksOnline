@@ -2,8 +2,10 @@
 import requests
 import re
 import csv
+import os
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
+from urllib.parse import urlencode
 
 #GET soup from url
 def get_soup(url) : 
@@ -115,6 +117,15 @@ def get_book_informations(book_url):
         gallery_div = soup.find('div', {'id':'product_gallery'})
         product_image = gallery_div.find('img')
         product_image_url = urljoin(str(base_url), str(product_image['src']))
+        #Download image
+        response = requests.get(product_image_url)
+        directory = "book_images"
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+        filename = product_title + ".jpg"
+        encoded_filename = urlencode({'name': filename})[5:]
+        with open(os.path.join(directory, encoded_filename), "wb") as f:
+            f.write(response.content)
 
         #Push it in a list
         book_data.append(td_product_upc_text)
@@ -136,7 +147,12 @@ def get_book_informations(book_url):
 # CSV generation 
 def create_csv_file(category_name,book_data):
     print('Creating CSV file...')
-    with open(f"{category_name}.csv", "w", newline="", encoding="utf-8") as csv_file:
+
+    csv_directory = "CSV_files"
+    if not os.path.exists(csv_directory):
+        os.makedirs(csv_directory)
+    filename = category_name
+    with open(os.path.join(csv_directory, f"{category_name}.csv"), "w", newline="", encoding="utf-8") as csv_file:
         writer = csv.writer(csv_file, delimiter=',')
         csv_header = ['UPC','Title','Price incl. taxes','Price excl. taxes','Stock quantity','Description','Category','Rating','Image URL','Article URL']
         writer.writerow(csv_header)
