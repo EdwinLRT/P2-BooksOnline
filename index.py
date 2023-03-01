@@ -65,7 +65,8 @@ def get_book_informations(book_url):
         article = soup.find('article')
         #Title
         product_title = article.select('.product_main h1')[0].get_text()
-
+        product_title = re.sub('[^a-zA-Z0-9 \n\.]', '', product_title)
+        
         #Product page URL
         page_url = response.url
 
@@ -89,7 +90,7 @@ def get_book_informations(book_url):
         else:
             product_description = product_description_title.find_next_sibling('p')
             product_description = product_description.get_text()
-
+            product_description = re.sub('[^a-zA-Z0-9 \n\.]', '', product_description)
         #Category
         th_product_type = soup.find('th', string ='Product Type')
         td_product_category = th_product_type.find_next_sibling('td')
