@@ -90,10 +90,11 @@ def get_book_informations(book_url):
         else:
             product_description = product_description_title.find_next_sibling('p')
             product_description = product_description.get_text()
+            product_description = product_description.replace('...more', '')
             product_description = re.sub('[^a-zA-Z0-9 \n\.]', '', product_description)
         #Category
-        th_product_type = soup.find('th', string ='Product Type')
-        td_product_category = th_product_type.find_next_sibling('td')
+        breadcrumb = soup.find('ul', {'class': 'breadcrumb'})
+        product_category = breadcrumb.find_all('a')[2].text.strip()
 
         #Review rating
         product_rating_class = soup.find(class_='star-rating')
@@ -123,9 +124,12 @@ def get_book_informations(book_url):
         directory = "book_images"
         if not os.path.exists(directory):
             os.makedirs(directory)
+        category_directory = os.path.join(directory, product_category)
+        if not os.path.exists(category_directory):
+            os.makedirs(category_directory)
         filename = product_title + ".jpg"
         encoded_filename = urlencode({'name': filename})[5:]
-        with open(os.path.join(directory, encoded_filename), "wb") as f:
+        with open(os.path.join(category_directory, encoded_filename), "wb") as f:
             f.write(response.content)
 
         #Push it in a list
@@ -135,7 +139,7 @@ def get_book_informations(book_url):
         book_data.append(td_product_price_excl_taxes)
         book_data.append(product_stock_quantity)
         book_data.append(product_description)
-        book_data.append(td_product_category.get_text())
+        book_data.append(product_category)
         book_data.append(product_rating_value)
         book_data.append(product_image_url)
         book_data.append(url)
